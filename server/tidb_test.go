@@ -611,9 +611,8 @@ func (ts *tidbTestSerialSuite) TestTLS(c *C) {
 		c.Assert(err, IsNil)
 	}()
 	time.Sleep(time.Millisecond * 100)
-	err = cli.runTestTLSConnection(c, connOverrider) // We should get ErrNoTLS.
-	c.Assert(err, NotNil)
-	c.Assert(errors.Cause(err).Error(), Equals, mysql.ErrNoTLS.Error())
+	err = cli.runTestTLSConnection(c, connOverrider) // Relying on automatically created TLS certificates
+	c.Assert(err, IsNil)
 	server.Close()
 
 	// Start the server with TLS but without CA, in this case the server will not verify client's certificate.
@@ -683,9 +682,9 @@ func (ts *tidbTestSerialSuite) TestTLS(c *C) {
 	c.Assert(util.IsTLSExpiredError(x509.CertificateInvalidError{Reason: x509.CANotAuthorizedForThisName}), IsFalse)
 	c.Assert(util.IsTLSExpiredError(x509.CertificateInvalidError{Reason: x509.Expired}), IsTrue)
 
-	_, err = util.LoadTLSCertificates("", "wrong key", "wrong cert")
+	_, _, err = util.LoadTLSCertificates("", "wrong key", "wrong cert")
 	c.Assert(err, NotNil)
-	_, err = util.LoadTLSCertificates("wrong ca", "/tmp/server-key.pem", "/tmp/server-cert.pem")
+	_, _, err = util.LoadTLSCertificates("wrong ca", "/tmp/server-key.pem", "/tmp/server-cert.pem")
 	c.Assert(err, NotNil)
 }
 
