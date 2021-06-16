@@ -63,6 +63,7 @@ import (
 	"github.com/pingcap/tidb/util/logutil"
 	"github.com/pingcap/tidb/util/memory"
 	"github.com/pingcap/tidb/util/resourcegrouptag"
+	"github.com/pingcap/tidb/util/sqlexec"
 	"github.com/pingcap/tidb/util/topsql"
 	tikverr "github.com/tikv/client-go/v2/error"
 	tikvstore "github.com/tikv/client-go/v2/kv"
@@ -1865,4 +1866,33 @@ func setResourceGroupTagForTxn(sc *stmtctx.StatementContext, snapshot kv.Snapsho
 	if snapshot != nil && variable.TopSQLEnabled() {
 		snapshot.SetOption(kv.ResourceGroupTag, sc.GetResourceGroupTag())
 	}
+}
+
+// HelpExec represents a server side help executor.
+type HelpExec struct {
+	baseExecutor
+
+	topic string
+	done  bool
+}
+
+// Next implements the Executor Next interface.
+func (e *HelpExec) Next(ctx context.Context, req *chunk.Chunk) error {
+	req.GrowAndReset(e.maxChunkSize)
+	if e.done {
+		return nil
+	}
+	e.done = true
+	exec := e.ctx.(sqlexec.RestrictedSQLExecutor)
+	stmt, err := exec.ParseWithParams(context.TODO(), `SELECT name, description, example FROM mysql.help_topic WHERE name=%?`, e.topic)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	rows, _, err := exec.ExecRestrictedStmt(context.TODO(), stmt)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	req.AppendRows(rows)
+	return nil
+
 }

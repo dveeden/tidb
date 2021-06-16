@@ -736,6 +736,8 @@ func (b *executorBuilder) buildSimple(v *plannercore.Simple) Executor {
 		return b.buildRevoke(s)
 	case *ast.BRIEStmt:
 		return b.buildBRIE(s, v.Schema())
+	case *ast.HelpStmt:
+		return b.buildHelp(s, v.Schema())
 	}
 	base := newBaseExecutor(b.ctx, v.Schema(), v.ID())
 	base.initCap = chunk.ZeroCapacity
@@ -4346,4 +4348,8 @@ func (b *executorBuilder) validCanReadTemporaryTable(tbl *model.TableInfo) error
 	}
 
 	return nil
+}
+
+func (b *executorBuilder) buildHelp(help *ast.HelpStmt, schema *expression.Schema) Executor {
+	return &HelpExec{baseExecutor: newBaseExecutor(b.ctx, schema, 0), topic: help.Topic}
 }
