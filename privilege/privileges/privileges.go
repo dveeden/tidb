@@ -344,6 +344,7 @@ func (p *UserPrivileges) ConnectionVerification(user, host string, authenticatio
 			return
 		}
 	} else if record.AuthPlugin == mysql.AuthCachingSha2Password {
+		logutil.BgLogger().Info(fmt.Sprintf("authdata: %x", authentication))
 		authok, err := auth.CheckShaPassword([]byte(pwd), string(authentication))
 		if err != nil {
 			logutil.BgLogger().Error("Failed to check caching_sha2_password", zap.Error(err))

@@ -38,6 +38,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/binary"
 	goerr "errors"
@@ -688,9 +689,12 @@ func (cc *clientConn) readOptionalSSLRequestAndHandshakeResponse(ctx context.Con
 		resp.Auth = newAuth
 	}
 
+	logutil.Logger(ctx).Info(fmt.Sprintf("Salt: %x", cc.salt))
+	logutil.Logger(ctx).Info(fmt.Sprintf("Auth: %x", resp.Auth))
+
 	switch resp.AuthPlugin {
 	case mysql.AuthCachingSha2Password:
-		resp.Auth, err = cc.authSha(ctx)
+		resp.Auth, err = cc.authSha(ctx, resp.Auth)
 		if err != nil {
 			return err
 		}
@@ -706,7 +710,7 @@ func (cc *clientConn) readOptionalSSLRequestAndHandshakeResponse(ctx context.Con
 	return err
 }
 
-func (cc *clientConn) authSha(ctx context.Context) ([]byte, error) {
+func (cc *clientConn) authSha(ctx context.Context, authdata []byte) ([]byte, error) {
 
 	const (
 		ShaCommand       = 1
@@ -714,6 +718,29 @@ func (cc *clientConn) authSha(ctx context.Context) ([]byte, error) {
 		FastAuthOk       = 3
 		FastAuthFail     = 4
 	)
+
+	p := []byte(`abc`)
+	X := sha256.Sum256(p)
+	Y := sha256.Sum256(X[:])
+	tempZ := sha256.New()
+	tempZ.Write(Y[:])
+	tempZ.Write(cc.salt)
+	Z := tempZ.Sum(nil)
+
+	newscramble := X
+	for i := range X {
+		newscramble[i] ^= Z[i]
+	}
+	logutil.Logger(ctx).Info(fmt.Sprintf("newscramble: %x", newscramble))
+
+	if bytes.Equal(newscramble[:], authdata) {
+		err := cc.writePacket([]byte{0, 0, 0, 0, ShaCommand, FastAuthOk})
+		if err != nil {
+			logutil.Logger(ctx).Error("authSha packet write failed", zap.Error(err))
+			return nil, err
+		}
+		return authdata, nil
+	}
 
 	err := cc.writePacket([]byte{0, 0, 0, 0, ShaCommand, FastAuthFail})
 	if err != nil {
