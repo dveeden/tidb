@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -2819,6 +2820,20 @@ func openReader(ctx context.Context, fileMeta mydump.SourceFileMeta, store stora
 		reader, err = storage.WithCompression(store, compressType).Open(ctx, fileMeta.Path)
 	default:
 		reader, err = store.Open(ctx, fileMeta.Path)
+
+		sampleBytes := make([]byte, 10)
+		_, err2 := io.ReadFull(reader, sampleBytes)
+		if err2 != nil {
+			log.FromContext(ctx).Warn("Failed to read sample bytes for mimetype detection",
+				zap.Error(err2))
+			return
+		}
+		mimeType := http.DetectContentType(sampleBytes)
+		if mimeType == "application/x-gzip" {
+			log.FromContext(ctx).Warn("Detected mimetype doesn't match compression type",
+				zap.String("mimetype", mimeType))
+		}
+		reader.Seek(0, os.SEEK_CUR)
 	}
 	return
 }
