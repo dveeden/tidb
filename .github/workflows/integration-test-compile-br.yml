@@ -1,4 +1,5 @@
-name: BR & Lightning
+name: Tools
+description: BR & Lightning
 on:
   push:
     branches:
