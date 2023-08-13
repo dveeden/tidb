@@ -108,6 +108,8 @@ require (
 	github.com/wangjohn/quickselect v0.0.0-20161129230411-ed8402a42d5f
 	github.com/xitongsys/parquet-go v1.5.5-0.20201110004701-b09c49d6d457
 	github.com/xitongsys/parquet-go-source v0.0.0-20200817004010-026bad9b25d0
+	github.com/yeqown/go-qrcode/v2 v2.2.2
+	github.com/yeqown/go-qrcode/writer/standard v1.2.1
 	go.etcd.io/etcd/api/v3 v3.5.2
 	go.etcd.io/etcd/client/pkg/v3 v3.5.2
 	go.etcd.io/etcd/client/v3 v3.5.2
@@ -138,7 +140,11 @@ require (
 )
 
 require (
+	github.com/fogleman/gg v1.3.0 // indirect
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
+	github.com/yeqown/reedsolomon v1.0.0 // indirect
+	golang.org/x/image v0.0.0-20200927104501-e162460cd6b5 // indirect
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491 // indirect
 )
 

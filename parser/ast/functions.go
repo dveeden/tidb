@@ -301,6 +301,7 @@ const (
 	TiDBShard       = "tidb_shard"
 	TiDBRowChecksum = "tidb_row_checksum"
 	GetLock         = "get_lock"
+	Qrcode          = "qrcode"
 	ReleaseLock     = "release_lock"
 	Grouping        = "grouping"
 
