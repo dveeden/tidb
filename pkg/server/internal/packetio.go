@@ -313,6 +313,8 @@ func newCompressedWriter(w io.Writer, ca int, seq *uint8) *compressedWriter {
 		seq,
 		ca,
 		3,
+		nil,
+		nil,
 	}
 }
 
@@ -322,6 +324,8 @@ type compressedWriter struct {
 	compressedSequence   *uint8
 	compressionAlgorithm int
 	zstdLevel            zstd.EncoderLevel
+	zstdEnc              *zstd.Encoder
+	zlibEnc              *zlib.Writer
 }
 
 func (cw *compressedWriter) Write(data []byte) (n int, err error) {
@@ -366,14 +370,29 @@ func (cw *compressedWriter) Flush() error {
 
 	switch cw.compressionAlgorithm {
 	case mysql.CompressionZlib:
-		w, err = zlib.NewWriterLevel(&payload, zlibCompressDefaultLevel)
+		if cw.zlibEnc == nil {
+			cw.zlibEnc, err = zlib.NewWriterLevel(&payload, zlibCompressDefaultLevel)
+			if err != nil {
+				return errors.Trace(err)
+			}
+			w = cw.zlibEnc
+		} else {
+			cw.zlibEnc.Reset(&payload)
+			w = cw.zlibEnc
+		}
 	case mysql.CompressionZstd:
-		w, err = zstd.NewWriter(&payload, zstd.WithEncoderLevel(cw.zstdLevel))
+		if cw.zstdEnc == nil {
+			cw.zstdEnc, err = zstd.NewWriter(&payload, zstd.WithEncoderLevel(cw.zstdLevel))
+			if err != nil {
+				return errors.Trace(err)
+			}
+			w = cw.zstdEnc
+		} else {
+			cw.zstdEnc.Reset(&payload)
+			w = cw.zstdEnc
+		}
 	default:
 		return errors.New("Unknown compression algorithm")
-	}
-	if err != nil {
-		return errors.Trace(err)
 	}
 
 	uncompressedLength := 0
@@ -434,6 +453,7 @@ func newCompressedReader(r io.Reader, ca int, seq *uint8) *compressedReader {
 		ca,
 		3,
 		0,
+		nil,
 	}
 }
 
@@ -444,6 +464,7 @@ type compressedReader struct {
 	compressionAlgorithm int
 	zstdLevel            zstd.EncoderLevel
 	pos                  uint64
+	zstdDec              *zstd.Decoder
 }
 
 func (cr *compressedReader) Read(data []byte) (n int, err error) {
@@ -474,11 +495,19 @@ func (cr *compressedReader) Read(data []byte) (n int, err error) {
 					return n, errors.Trace(err)
 				}
 			case mysql.CompressionZstd:
-				zstdReader, err := zstd.NewReader(cr.r, zstd.WithDecoderConcurrency(1))
-				if err != nil {
-					return n, errors.Trace(err)
+				if cr.zstdDec == nil {
+					var err error
+					cr.zstdDec, err = zstd.NewReader(cr.r, zstd.WithDecoderConcurrency(1))
+					if err != nil {
+						return n, errors.Trace(err)
+					}
+				} else {
+					err = cr.zstdDec.Reset(cr.r)
+					if err != nil {
+						return n, errors.Trace(err)
+					}
 				}
-				r = zstdReader.IOReadCloser()
+				r = cr.zstdDec.IOReadCloser()
 			default:
 				return n, errors.New("Unknown compression algorithm")
 			}

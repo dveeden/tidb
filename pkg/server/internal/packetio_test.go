@@ -424,3 +424,77 @@ func TestCompressedReaderLong(t *testing.T) {
 		require.Equal(t, expected, data)
 	})
 }
+
+func BenchmarkCompressedWriter(b *testing.B) {
+	b.Run("short", func(b *testing.B) {
+		payload := []byte("short")
+		seq := uint8(0)
+		var testdata bytes.Buffer
+		cw := newCompressedWriter(&testdata, mysql.CompressionZlib, &seq)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			cw.Write(payload)
+			cw.Flush()
+		}
+	})
+	b.Run("zlib", func(b *testing.B) {
+		payload := []byte("test_zlib test_zlib test_zlib test_zlib test_zlib test_zlib test_zlib")
+		seq := uint8(0)
+		var testdata bytes.Buffer
+		cw := newCompressedWriter(&testdata, mysql.CompressionZlib, &seq)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			cw.Write(payload)
+			cw.Flush()
+		}
+	})
+	b.Run("zstd", func(b *testing.B) {
+		payload := []byte("test_zstd test_zstd test_zstd test_zstd test_zstd test_zstd test_zstd")
+		seq := uint8(0)
+		var testdata bytes.Buffer
+		cw := newCompressedWriter(&testdata, mysql.CompressionZstd, &seq)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			cw.Write(payload)
+			cw.Flush()
+		}
+	})
+}
+
+func BenchmarkCompressedReader(b *testing.B) {
+	b.Run("zlib", func(b *testing.B) {
+		payload := []byte{0x19, 0x0, 0x0, 0x0, 0x9c, 0x0, 0x0, 0x78, 0x5e, 0x9b,
+			0xc1, 0xc0, 0xc0, 0xc0, 0x1c, 0xec, 0xea, 0xe3, 0xea, 0x1c, 0xa2,
+			0xa0, 0xe4, 0x38, 0xa8, 0x80, 0x12, 0x0, 0xbe, 0xe6, 0x26, 0xce}
+		r := bytes.NewReader(payload)
+		seq := uint8(0)
+		cr := newCompressedReader(r, mysql.CompressionZlib, &seq)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			header := make([]byte, 4)
+			cr.Read(header)
+			length := int(uint32(header[0]) | uint32(header[1])<<8 | uint32(header[2])<<16)
+			data := make([]byte, length)
+			cr.Read(data)
+			r.Seek(0, io.SeekStart)
+		}
+	})
+	b.Run("zstd", func(b *testing.B) {
+		payload := []byte{0x1f, 0x0, 0x0, 0x0, 0x9c, 0x0, 0x0, 0x28, 0xb5, 0x2f, 0xfd,
+			0x20, 0x9c, 0xb5, 0x0, 0x0, 0x78, 0x98, 0x0, 0x0, 0x0, 0x3, 0x53,
+			0x45, 0x4c, 0x45, 0x43, 0x54, 0x20, 0x22, 0x41, 0x22, 0x1, 0x0, 0xa,
+			0xa, 0x28, 0x1}
+		r := bytes.NewReader(payload)
+		seq := uint8(0)
+		cr := newCompressedReader(r, mysql.CompressionZstd, &seq)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			header := make([]byte, 4)
+			cr.Read(header)
+			length := int(uint32(header[0]) | uint32(header[1])<<8 | uint32(header[2])<<16)
+			data := make([]byte, length)
+			cr.Read(data)
+			r.Seek(0, io.SeekStart)
+		}
+	})
+}
