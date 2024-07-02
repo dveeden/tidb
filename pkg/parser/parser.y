@@ -13782,6 +13782,8 @@ PasswordOrLockOption:
 		$$ = &ast.PasswordOrLockOption{
 			Type: ast.PasswordRequireCurrentDefault,
 		}
+		yylex.AppendError(yylex.Errorf("TiDB does not support PASSWORD REQUIRE CURRENT DEFAULT, it is parsed but ignored."))
+		parser.lastErrorAsWarn()
 	}
 
 AuthOption:
