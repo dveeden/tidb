@@ -27,42 +27,6 @@ import (
 	"github.com/pingcap/tipb/go-tipb"
 )
 
-var (
-	_ functionClass = &arithmeticPlusFunctionClass{}
-	_ functionClass = &arithmeticMinusFunctionClass{}
-	_ functionClass = &arithmeticDivideFunctionClass{}
-	_ functionClass = &arithmeticMultiplyFunctionClass{}
-	_ functionClass = &arithmeticIntDivideFunctionClass{}
-	_ functionClass = &arithmeticModFunctionClass{}
-)
-
-var (
-	_ builtinFunc = &builtinArithmeticPlusRealSig{}
-	_ builtinFunc = &builtinArithmeticPlusDecimalSig{}
-	_ builtinFunc = &builtinArithmeticPlusIntSig{}
-	_ builtinFunc = &builtinArithmeticMinusRealSig{}
-	_ builtinFunc = &builtinArithmeticMinusDecimalSig{}
-	_ builtinFunc = &builtinArithmeticMinusIntSig{}
-	_ builtinFunc = &builtinArithmeticDivideRealSig{}
-	_ builtinFunc = &builtinArithmeticDivideDecimalSig{}
-	_ builtinFunc = &builtinArithmeticMultiplyRealSig{}
-	_ builtinFunc = &builtinArithmeticMultiplyDecimalSig{}
-	_ builtinFunc = &builtinArithmeticMultiplyIntUnsignedSig{}
-	_ builtinFunc = &builtinArithmeticMultiplyIntSig{}
-	_ builtinFunc = &builtinArithmeticIntDivideIntSig{}
-	_ builtinFunc = &builtinArithmeticIntDivideDecimalSig{}
-	_ builtinFunc = &builtinArithmeticModIntUnsignedUnsignedSig{}
-	_ builtinFunc = &builtinArithmeticModIntUnsignedSignedSig{}
-	_ builtinFunc = &builtinArithmeticModIntSignedUnsignedSig{}
-	_ builtinFunc = &builtinArithmeticModIntSignedSignedSig{}
-	_ builtinFunc = &builtinArithmeticModRealSig{}
-	_ builtinFunc = &builtinArithmeticModDecimalSig{}
-
-	_ builtinFunc = &builtinArithmeticPlusVectorFloat32Sig{}
-	_ builtinFunc = &builtinArithmeticMinusVectorFloat32Sig{}
-	_ builtinFunc = &builtinArithmeticMultiplyVectorFloat32Sig{}
-)
-
 // isConstantBinaryLiteral return true if expr is constant binary literal
 func isConstantBinaryLiteral(ctx EvalContext, expr Expression) bool {
 	if types.IsBinaryStr(expr.GetType(ctx)) {

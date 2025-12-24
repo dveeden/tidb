@@ -33,55 +33,6 @@ import (
 	"github.com/pingcap/tipb/go-tipb"
 )
 
-var (
-	_ functionClass = &inFunctionClass{}
-	_ functionClass = &rowFunctionClass{}
-	_ functionClass = &setVarFunctionClass{}
-	_ functionClass = &getIntVarFunctionClass{}
-	_ functionClass = &getRealVarFunctionClass{}
-	_ functionClass = &getDecimalVarFunctionClass{}
-	_ functionClass = &getTimeVarFunctionClass{}
-	_ functionClass = &getStringVarFunctionClass{}
-	_ functionClass = &lockFunctionClass{}
-	_ functionClass = &releaseLockFunctionClass{}
-	_ functionClass = &valuesFunctionClass{}
-	_ functionClass = &bitCountFunctionClass{}
-	_ functionClass = &getParamFunctionClass{}
-)
-
-var (
-	_ builtinFunc = &builtinSleepSig{}
-	_ builtinFunc = &builtinInIntSig{}
-	_ builtinFunc = &builtinInStringSig{}
-	_ builtinFunc = &builtinInDecimalSig{}
-	_ builtinFunc = &builtinInRealSig{}
-	_ builtinFunc = &builtinInTimeSig{}
-	_ builtinFunc = &builtinInDurationSig{}
-	_ builtinFunc = &builtinInJSONSig{}
-	_ builtinFunc = &builtinInVectorFloat32Sig{}
-	_ builtinFunc = &builtinRowSig{}
-	_ builtinFunc = &builtinSetStringVarSig{}
-	_ builtinFunc = &builtinSetIntVarSig{}
-	_ builtinFunc = &builtinSetRealVarSig{}
-	_ builtinFunc = &builtinSetDecimalVarSig{}
-	_ builtinFunc = &builtinGetStringVarSig{}
-	_ builtinFunc = &builtinGetIntVarSig{}
-	_ builtinFunc = &builtinGetRealVarSig{}
-	_ builtinFunc = &builtinGetDecimalVarSig{}
-	_ builtinFunc = &builtinGetTimeVarSig{}
-	_ builtinFunc = &builtinLockSig{}
-	_ builtinFunc = &builtinReleaseLockSig{}
-	_ builtinFunc = &builtinValuesIntSig{}
-	_ builtinFunc = &builtinValuesRealSig{}
-	_ builtinFunc = &builtinValuesDecimalSig{}
-	_ builtinFunc = &builtinValuesStringSig{}
-	_ builtinFunc = &builtinValuesTimeSig{}
-	_ builtinFunc = &builtinValuesDurationSig{}
-	_ builtinFunc = &builtinValuesJSONSig{}
-	_ builtinFunc = &builtinBitCountSig{}
-	_ builtinFunc = &builtinGetParamStringSig{}
-)
-
 type inFunctionClass struct {
 	baseFunctionClass
 }

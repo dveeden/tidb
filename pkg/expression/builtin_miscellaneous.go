@@ -38,69 +38,6 @@ import (
 	"github.com/pingcap/tipb/go-tipb"
 )
 
-var (
-	_ functionClass = &sleepFunctionClass{}
-	_ functionClass = &lockFunctionClass{}
-	_ functionClass = &releaseLockFunctionClass{}
-	_ functionClass = &anyValueFunctionClass{}
-	_ functionClass = &defaultFunctionClass{}
-	_ functionClass = &inetAtonFunctionClass{}
-	_ functionClass = &inetNtoaFunctionClass{}
-	_ functionClass = &inet6AtonFunctionClass{}
-	_ functionClass = &inet6NtoaFunctionClass{}
-	_ functionClass = &isFreeLockFunctionClass{}
-	_ functionClass = &isIPv4FunctionClass{}
-	_ functionClass = &isIPv4CompatFunctionClass{}
-	_ functionClass = &isIPv4MappedFunctionClass{}
-	_ functionClass = &isIPv6FunctionClass{}
-	_ functionClass = &isUsedLockFunctionClass{}
-	_ functionClass = &nameConstFunctionClass{}
-	_ functionClass = &releaseAllLocksFunctionClass{}
-	_ functionClass = &uuidFunctionClass{}
-	_ functionClass = &uuidShortFunctionClass{}
-	_ functionClass = &vitessHashFunctionClass{}
-	_ functionClass = &uuidToBinFunctionClass{}
-	_ functionClass = &binToUUIDFunctionClass{}
-	_ functionClass = &isUUIDFunctionClass{}
-	_ functionClass = &tidbShardFunctionClass{}
-)
-
-var (
-	_ builtinFunc = &builtinSleepSig{}
-	_ builtinFunc = &builtinLockSig{}
-	_ builtinFunc = &builtinReleaseLockSig{}
-	_ builtinFunc = &builtinReleaseAllLocksSig{}
-	_ builtinFunc = &builtinDecimalAnyValueSig{}
-	_ builtinFunc = &builtinDurationAnyValueSig{}
-	_ builtinFunc = &builtinIntAnyValueSig{}
-	_ builtinFunc = &builtinJSONAnyValueSig{}
-	_ builtinFunc = &builtinRealAnyValueSig{}
-	_ builtinFunc = &builtinStringAnyValueSig{}
-	_ builtinFunc = &builtinTimeAnyValueSig{}
-	_ builtinFunc = &builtinInetAtonSig{}
-	_ builtinFunc = &builtinInetNtoaSig{}
-	_ builtinFunc = &builtinInet6AtonSig{}
-	_ builtinFunc = &builtinInet6NtoaSig{}
-	_ builtinFunc = &builtinIsIPv4Sig{}
-	_ builtinFunc = &builtinIsIPv4CompatSig{}
-	_ builtinFunc = &builtinIsIPv4MappedSig{}
-	_ builtinFunc = &builtinIsIPv6Sig{}
-	_ builtinFunc = &builtinIsUUIDSig{}
-	_ builtinFunc = &builtinUUIDSig{}
-	_ builtinFunc = &builtinVitessHashSig{}
-	_ builtinFunc = &builtinUUIDToBinSig{}
-	_ builtinFunc = &builtinBinToUUIDSig{}
-
-	_ builtinFunc = &builtinNameConstIntSig{}
-	_ builtinFunc = &builtinNameConstRealSig{}
-	_ builtinFunc = &builtinNameConstDecimalSig{}
-	_ builtinFunc = &builtinNameConstTimeSig{}
-	_ builtinFunc = &builtinNameConstDurationSig{}
-	_ builtinFunc = &builtinNameConstStringSig{}
-	_ builtinFunc = &builtinNameConstJSONSig{}
-	_ builtinFunc = &builtinTidbShardSig{}
-)
-
 const (
 	tidbShardBucketCount = 256
 )

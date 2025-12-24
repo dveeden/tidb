@@ -44,38 +44,6 @@ import (
 	"github.com/pingcap/tipb/go-tipb"
 )
 
-var (
-	_ functionClass = &aesDecryptFunctionClass{}
-	_ functionClass = &aesEncryptFunctionClass{}
-	_ functionClass = &compressFunctionClass{}
-	_ functionClass = &decodeFunctionClass{}
-	_ functionClass = &encodeFunctionClass{}
-	_ functionClass = &md5FunctionClass{}
-	_ functionClass = &passwordFunctionClass{}
-	_ functionClass = &randomBytesFunctionClass{}
-	_ functionClass = &sha1FunctionClass{}
-	_ functionClass = &sha2FunctionClass{}
-	_ functionClass = &uncompressFunctionClass{}
-	_ functionClass = &uncompressedLengthFunctionClass{}
-	_ functionClass = &validatePasswordStrengthFunctionClass{}
-)
-
-var (
-	_ builtinFunc = &builtinAesDecryptSig{}
-	_ builtinFunc = &builtinAesDecryptIVSig{}
-	_ builtinFunc = &builtinAesEncryptSig{}
-	_ builtinFunc = &builtinAesEncryptIVSig{}
-	_ builtinFunc = &builtinCompressSig{}
-	_ builtinFunc = &builtinMD5Sig{}
-	_ builtinFunc = &builtinPasswordSig{}
-	_ builtinFunc = &builtinRandomBytesSig{}
-	_ builtinFunc = &builtinSHA1Sig{}
-	_ builtinFunc = &builtinSHA2Sig{}
-	_ builtinFunc = &builtinUncompressSig{}
-	_ builtinFunc = &builtinUncompressedLengthSig{}
-	_ builtinFunc = &builtinValidatePasswordStrengthSig{}
-)
-
 // aesModeAttr indicates that the key length and iv attribute for specific block_encryption_mode.
 // keySize is the key length in bits and mode is the encryption mode.
 // ivRequired indicates that initialization vector is required or not.

@@ -25,39 +25,6 @@ import (
 	"github.com/pingcap/tipb/go-tipb"
 )
 
-var (
-	_ functionClass = &caseWhenFunctionClass{}
-	_ functionClass = &ifFunctionClass{}
-	_ functionClass = &ifNullFunctionClass{}
-)
-
-var (
-	_ builtinFunc = &builtinCaseWhenIntSig{}
-	_ builtinFunc = &builtinCaseWhenRealSig{}
-	_ builtinFunc = &builtinCaseWhenDecimalSig{}
-	_ builtinFunc = &builtinCaseWhenStringSig{}
-	_ builtinFunc = &builtinCaseWhenTimeSig{}
-	_ builtinFunc = &builtinCaseWhenDurationSig{}
-	_ builtinFunc = &builtinCaseWhenJSONSig{}
-	_ builtinFunc = &builtinCaseWhenVectorFloat32Sig{}
-	_ builtinFunc = &builtinIfNullIntSig{}
-	_ builtinFunc = &builtinIfNullRealSig{}
-	_ builtinFunc = &builtinIfNullDecimalSig{}
-	_ builtinFunc = &builtinIfNullStringSig{}
-	_ builtinFunc = &builtinIfNullTimeSig{}
-	_ builtinFunc = &builtinIfNullDurationSig{}
-	_ builtinFunc = &builtinIfNullJSONSig{}
-	_ builtinFunc = &builtinIfNullVectorFloat32Sig{}
-	_ builtinFunc = &builtinIfIntSig{}
-	_ builtinFunc = &builtinIfRealSig{}
-	_ builtinFunc = &builtinIfDecimalSig{}
-	_ builtinFunc = &builtinIfStringSig{}
-	_ builtinFunc = &builtinIfTimeSig{}
-	_ builtinFunc = &builtinIfDurationSig{}
-	_ builtinFunc = &builtinIfJSONSig{}
-	_ builtinFunc = &builtinIfVectorFloat32Sig{}
-)
-
 func maxlen(lhsFlen, rhsFlen int) int {
 	// -1 indicates that the length is unknown, such as the case for expressions.
 	if lhsFlen < 0 || rhsFlen < 0 {

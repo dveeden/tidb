@@ -21,14 +21,6 @@ import (
 	"github.com/pingcap/tipb/go-tipb"
 )
 
-var (
-	_ functionClass = &ftsMatchWordFunctionClass{}
-)
-
-var (
-	_ builtinFunc = &builtinFtsMatchWordSig{}
-)
-
 type ftsMatchWordFunctionClass struct {
 	baseFunctionClass
 }

@@ -26,14 +26,6 @@ import (
 	"github.com/pingcap/tipb/go-tipb"
 )
 
-var (
-	_ functionClass = &groupingImplFunctionClass{}
-)
-
-var (
-	_ builtinFunc = &BuiltinGroupingImplSig{}
-)
-
 type groupingImplFunctionClass struct {
 	baseFunctionClass
 }

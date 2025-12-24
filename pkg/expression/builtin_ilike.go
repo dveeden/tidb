@@ -23,14 +23,6 @@ import (
 	"github.com/pingcap/tipb/go-tipb"
 )
 
-var (
-	_ functionClass = &ilikeFunctionClass{}
-)
-
-var (
-	_ builtinFunc = &builtinIlikeSig{}
-)
-
 type ilikeFunctionClass struct {
 	baseFunctionClass
 }

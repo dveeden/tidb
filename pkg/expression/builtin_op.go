@@ -27,38 +27,6 @@ import (
 	"github.com/pingcap/tipb/go-tipb"
 )
 
-var (
-	_ functionClass = &logicAndFunctionClass{}
-	_ functionClass = &logicOrFunctionClass{}
-	_ functionClass = &logicXorFunctionClass{}
-	_ functionClass = &isTrueOrFalseFunctionClass{}
-	_ functionClass = &unaryMinusFunctionClass{}
-	_ functionClass = &isNullFunctionClass{}
-	_ functionClass = &unaryNotFunctionClass{}
-)
-
-var (
-	_ builtinFunc = &builtinLogicAndSig{}
-	_ builtinFunc = &builtinLogicOrSig{}
-	_ builtinFunc = &builtinLogicXorSig{}
-	_ builtinFunc = &builtinRealIsTrueSig{}
-	_ builtinFunc = &builtinDecimalIsTrueSig{}
-	_ builtinFunc = &builtinIntIsTrueSig{}
-	_ builtinFunc = &builtinRealIsFalseSig{}
-	_ builtinFunc = &builtinDecimalIsFalseSig{}
-	_ builtinFunc = &builtinIntIsFalseSig{}
-	_ builtinFunc = &builtinUnaryMinusIntSig{}
-	_ builtinFunc = &builtinDecimalIsNullSig{}
-	_ builtinFunc = &builtinDurationIsNullSig{}
-	_ builtinFunc = &builtinIntIsNullSig{}
-	_ builtinFunc = &builtinRealIsNullSig{}
-	_ builtinFunc = &builtinStringIsNullSig{}
-	_ builtinFunc = &builtinTimeIsNullSig{}
-	_ builtinFunc = &builtinUnaryNotRealSig{}
-	_ builtinFunc = &builtinUnaryNotDecimalSig{}
-	_ builtinFunc = &builtinUnaryNotIntSig{}
-)
-
 type logicAndFunctionClass struct {
 	baseFunctionClass
 }

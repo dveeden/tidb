@@ -31,14 +31,6 @@ import (
 )
 
 var (
-	_ functionClass = &tidbToBinaryFunctionClass{}
-	_ functionClass = &tidbFromBinaryFunctionClass{}
-
-	_ builtinFunc = &builtinInternalToBinarySig{}
-	_ builtinFunc = &builtinInternalFromBinarySig{}
-)
-
-var (
 	// errCannotConvertString returns when the string can not convert to other charset.
 	errCannotConvertString = dbterror.ClassExpression.NewStd(errno.ErrCannotConvertString)
 )

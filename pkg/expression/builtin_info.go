@@ -44,60 +44,6 @@ import (
 	"github.com/pingcap/tipb/go-tipb"
 )
 
-var (
-	_ functionClass = &databaseFunctionClass{}
-	_ functionClass = &foundRowsFunctionClass{}
-	_ functionClass = &currentUserFunctionClass{}
-	_ functionClass = &currentRoleFunctionClass{}
-	_ functionClass = &currentResourceGroupFunctionClass{}
-	_ functionClass = &userFunctionClass{}
-	_ functionClass = &connectionIDFunctionClass{}
-	_ functionClass = &lastInsertIDFunctionClass{}
-	_ functionClass = &versionFunctionClass{}
-	_ functionClass = &benchmarkFunctionClass{}
-	_ functionClass = &charsetFunctionClass{}
-	_ functionClass = &coercibilityFunctionClass{}
-	_ functionClass = &collationFunctionClass{}
-	_ functionClass = &rowCountFunctionClass{}
-	_ functionClass = &tidbVersionFunctionClass{}
-	_ functionClass = &tidbIsDDLOwnerFunctionClass{}
-	_ functionClass = &tidbDecodePlanFunctionClass{}
-	_ functionClass = &tidbMVCCInfoFunctionClass{}
-	_ functionClass = &tidbEncodeRecordKeyClass{}
-	_ functionClass = &tidbEncodeIndexKeyClass{}
-	_ functionClass = &tidbDecodeKeyFunctionClass{}
-	_ functionClass = &tidbDecodeSQLDigestsFunctionClass{}
-	_ functionClass = &nextValFunctionClass{}
-	_ functionClass = &lastValFunctionClass{}
-	_ functionClass = &setValFunctionClass{}
-	_ functionClass = &formatBytesFunctionClass{}
-	_ functionClass = &formatNanoTimeFunctionClass{}
-)
-
-var (
-	_ builtinFunc = &builtinDatabaseSig{}
-	_ builtinFunc = &builtinFoundRowsSig{}
-	_ builtinFunc = &builtinCurrentUserSig{}
-	_ builtinFunc = &builtinCurrentResourceGroupSig{}
-	_ builtinFunc = &builtinUserSig{}
-	_ builtinFunc = &builtinConnectionIDSig{}
-	_ builtinFunc = &builtinLastInsertIDSig{}
-	_ builtinFunc = &builtinLastInsertIDWithIDSig{}
-	_ builtinFunc = &builtinVersionSig{}
-	_ builtinFunc = &builtinTiDBVersionSig{}
-	_ builtinFunc = &builtinRowCountSig{}
-	_ builtinFunc = &builtinTiDBMVCCInfoSig{}
-	_ builtinFunc = &builtinTiDBEncodeRecordKeySig{}
-	_ builtinFunc = &builtinTiDBEncodeIndexKeySig{}
-	_ builtinFunc = &builtinTiDBDecodeKeySig{}
-	_ builtinFunc = &builtinTiDBDecodeSQLDigestsSig{}
-	_ builtinFunc = &builtinNextValSig{}
-	_ builtinFunc = &builtinLastValSig{}
-	_ builtinFunc = &builtinSetValSig{}
-	_ builtinFunc = &builtinFormatBytesSig{}
-	_ builtinFunc = &builtinFormatNanoTimeSig{}
-)
-
 type databaseFunctionClass struct {
 	baseFunctionClass
 }

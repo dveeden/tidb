@@ -22,28 +22,6 @@ import (
 	"github.com/pingcap/tipb/go-tipb"
 )
 
-var (
-	_ functionClass = &vecDimsFunctionClass{}
-	_ functionClass = &vecL1DistanceFunctionClass{}
-	_ functionClass = &vecL2DistanceFunctionClass{}
-	_ functionClass = &vecNegativeInnerProductFunctionClass{}
-	_ functionClass = &vecCosineDistanceFunctionClass{}
-	_ functionClass = &vecL2NormFunctionClass{}
-	_ functionClass = &vecFromTextFunctionClass{}
-	_ functionClass = &vecAsTextFunctionClass{}
-)
-
-var (
-	_ builtinFunc = &builtinVecDimsSig{}
-	_ builtinFunc = &builtinVecL1DistanceSig{}
-	_ builtinFunc = &builtinVecL2DistanceSig{}
-	_ builtinFunc = &builtinVecNegativeInnerProductSig{}
-	_ builtinFunc = &builtinVecCosineDistanceSig{}
-	_ builtinFunc = &builtinVecL2NormSig{}
-	_ builtinFunc = &builtinVecFromTextSig{}
-	_ builtinFunc = &builtinVecAsTextSig{}
-)
-
 type vecDimsFunctionClass struct {
 	baseFunctionClass
 }
