@@ -22,14 +22,17 @@ import (
 	"github.com/pingcap/tidb/pkg/executor/internal/exec"
 	"github.com/pingcap/tidb/pkg/expression"
 	"github.com/pingcap/tidb/pkg/infoschema"
+	"github.com/pingcap/tidb/pkg/meta/model"
 	"github.com/pingcap/tidb/pkg/parser"
 	"github.com/pingcap/tidb/pkg/parser/ast"
 	"github.com/pingcap/tidb/pkg/parser/mysql"
 	plannercore "github.com/pingcap/tidb/pkg/planner/core"
 	"github.com/pingcap/tidb/pkg/planner/core/base"
+	"github.com/pingcap/tidb/pkg/planner/core/operator/physicalop"
 	"github.com/pingcap/tidb/pkg/planner/core/resolve"
 	"github.com/pingcap/tidb/pkg/sessionctx"
 	"github.com/pingcap/tidb/pkg/sessiontxn"
+	"github.com/pingcap/tidb/pkg/table/tables"
 	"github.com/pingcap/tidb/pkg/types"
 	"github.com/pingcap/tidb/pkg/util"
 	"github.com/pingcap/tidb/pkg/util/chunk"
@@ -56,6 +59,7 @@ type PrepareExec struct {
 
 	ID         uint32
 	ParamCount int
+	Params     []*model.ColumnInfo
 	Fields     []*resolve.ResultField
 	Stmt       any
 
@@ -158,6 +162,24 @@ func (e *PrepareExec) Next(ctx context.Context, _ *chunk.Chunk) error {
 	if !isNoResultPlan(p) {
 		e.Fields = colNames2ResultFields(p.Schema(), p.OutputNames(), vars.CurrentDB)
 	}
+
+	// For INSERT, set e.Params so we know the types and if the binary flag is set for
+	// each field.
+	if ins, ok := p.(*physicalop.Insert); ok {
+		for _, col := range ins.Columns {
+			if tc, ok := ins.Table.(*tables.TableCommon); ok {
+				for _, tcc := range tc.Columns {
+					if col.Name == tcc.ColumnInfo.Name {
+						e.Params = append(e.Params, tcc.ColumnInfo)
+					}
+				}
+			}
+		}
+	}
+	for len(e.Params) < paramCnt {
+		e.Params = append(e.Params, &model.ColumnInfo{})
+	}
+
 	if e.ID == 0 {
 		e.ID = vars.GetNextPreparedStmtID()
 	}

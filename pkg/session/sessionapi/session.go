@@ -21,6 +21,7 @@ import (
 
 	"github.com/pingcap/tidb/pkg/expression"
 	"github.com/pingcap/tidb/pkg/extension"
+	"github.com/pingcap/tidb/pkg/meta/model"
 	"github.com/pingcap/tidb/pkg/parser/ast"
 	"github.com/pingcap/tidb/pkg/parser/auth"
 	"github.com/pingcap/tidb/pkg/planner/core/resolve"
@@ -51,7 +52,7 @@ type Session interface {
 	CommitTxn(context.Context) error
 	RollbackTxn(context.Context)
 	// PrepareStmt executes prepare statement in binary protocol.
-	PrepareStmt(sql string) (stmtID uint32, paramCount int, fields []*resolve.ResultField, err error)
+	PrepareStmt(sql string) (stmtID uint32, paramCount int, params []*model.ColumnInfo, fields []*resolve.ResultField, err error)
 	// ExecutePreparedStmt executes a prepared statement.
 	// Deprecated: please use ExecuteStmt, this function is left for testing only.
 	// TODO: remove ExecutePreparedStmt.

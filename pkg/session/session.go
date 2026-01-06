@@ -3060,7 +3060,7 @@ func (s *session) rollbackOnError(ctx context.Context) {
 }
 
 // PrepareStmt is used for executing prepare statement in binary protocol
-func (s *session) PrepareStmt(sql string) (stmtID uint32, paramCount int, fields []*resolve.ResultField, err error) {
+func (s *session) PrepareStmt(sql string) (stmtID uint32, paramCount int, params []*model.ColumnInfo, fields []*resolve.ResultField, err error) {
 	defer func() {
 		if s.sessionVars.StmtCtx != nil {
 			s.sessionVars.StmtCtx.DetachMemDiskTracker()
@@ -3098,7 +3098,7 @@ func (s *session) PrepareStmt(sql string) (stmtID uint32, paramCount int, fields
 	if err != nil {
 		return
 	}
-	return prepareExec.ID, prepareExec.ParamCount, prepareExec.Fields, nil
+	return prepareExec.ID, prepareExec.ParamCount, prepareExec.Params, prepareExec.Fields, nil
 }
 
 // ExecutePreparedStmt executes a prepared statement.

@@ -85,7 +85,7 @@ func exec(se sessionapi.Session, sql string, args ...any) (sqlexec.RecordSet, er
 		}
 		return nil, err
 	}
-	stmtID, _, _, err := se.PrepareStmt(sql)
+	stmtID, _, _, _, err := se.PrepareStmt(sql)
 	if err != nil {
 		return nil, err
 	}

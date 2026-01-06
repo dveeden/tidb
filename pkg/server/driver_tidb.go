@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap/tidb/pkg/extension"
 	"github.com/pingcap/tidb/pkg/kv"
 	"github.com/pingcap/tidb/pkg/parser/ast"
+	"github.com/pingcap/tidb/pkg/parser/charset"
 	"github.com/pingcap/tidb/pkg/parser/mysql"
 	"github.com/pingcap/tidb/pkg/parser/terror"
 	"github.com/pingcap/tidb/pkg/planner/core"
@@ -335,7 +336,7 @@ func (tc *TiDBContext) GetStatement(stmtID int) PreparedStatement {
 
 // Prepare implements QueryCtx Prepare method.
 func (tc *TiDBContext) Prepare(sql string) (statement PreparedStatement, columns, params []*column.Info, err error) {
-	stmtID, paramCount, fields, err := tc.Session.PrepareStmt(sql)
+	stmtID, paramCount, paramInfo, fields, err := tc.Session.PrepareStmt(sql)
 	if err != nil {
 		return
 	}
@@ -351,10 +352,24 @@ func (tc *TiDBContext) Prepare(sql string) (statement PreparedStatement, columns
 	for i := range fields {
 		columns[i] = column.ConvertColumnInfo(fields[i])
 	}
-	params = make([]*column.Info, paramCount)
-	for i := range params {
+	params = make([]*column.Info, len(paramInfo))
+	for i := range paramInfo {
+		cset := paramInfo[i].FieldType.GetCharset()
+		if len(cset) == 0 {
+			cset = charset.CharsetUTF8MB4
+		}
+		csinfo, err := charset.GetCharsetInfo(cset)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("charset for col %d %s: %w", i, cset, err)
+		}
+		col, err := charset.GetCollationByName(csinfo.DefaultCollation)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 		params[i] = &column.Info{
-			Type: mysql.TypeBlob,
+			Type:    paramInfo[i].FieldType.GetType(),
+			Flag:    uint16(paramInfo[i].FieldType.GetFlag()),
+			Charset: uint16(col.ID),
 		}
 	}
 	tc.stmts[int(stmtID)] = stmt
