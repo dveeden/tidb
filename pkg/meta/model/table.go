@@ -22,6 +22,8 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/pingcap/errors"
+	"github.com/pingcap/tidb/pkg/parser/ast"
 	"github.com/pingcap/tidb/pkg/parser/auth"
 	"github.com/pingcap/tidb/pkg/parser/duration"
 	"github.com/pingcap/tidb/pkg/parser/model"
@@ -42,6 +44,9 @@ const ExtraPhysTblID = -3
 
 // ExtraRowChecksumID is the column ID of column which holds the row checksum info.
 const ExtraRowChecksumID = -4
+
+// ExtraCommitTSID is the column ID of column which holds the commit timestamp.
+const ExtraCommitTSID = -5
 
 const (
 	// TableInfoVersion0 means the table info version is 0.
@@ -190,6 +195,15 @@ type TableInfo struct {
 
 	TTLInfo *TTLInfo `json:"ttl_info"`
 
+	// Affinity stores the affinity info for the table
+	// If it is nil, it means no affinity
+	Affinity *TableAffinityInfo `json:"affinity,omitempty"`
+
+	// IsActiveActive means the table is active-active table.
+	IsActiveActive bool `json:"is_active_active,omitempty"`
+	// SoftdeleteInfo is softdelete TTL. It is required if IsActiveActive == true.
+	SoftdeleteInfo *SoftdeleteInfo `json:"softdelete_info,omitempty"`
+
 	// Revision is per table schema's version, it will be increased when the schema changed.
 	Revision uint64 `json:"revision"`
 
@@ -243,6 +257,10 @@ func (t *TableInfo) Clone() *TableInfo {
 	}
 	if t.TTLInfo != nil {
 		nt.TTLInfo = t.TTLInfo.Clone()
+	}
+
+	if t.Affinity != nil {
+		nt.Affinity = t.Affinity.Clone()
 	}
 
 	return &nt
@@ -1408,4 +1426,47 @@ func (t *TTLInfo) GetJobInterval() (time.Duration, error) {
 	}
 
 	return duration.ParseDuration(t.JobInterval)
+}
+
+// TableAffinityInfo indicates the data affinity information of the table.
+type TableAffinityInfo struct {
+	// Level indicates the affinity level of the table.
+	Level string `json:"level"`
+}
+
+// NewTableAffinityInfoWithLevel creates a new TableAffinityInfo with level
+// If level is "none" or "", a nil value will be returned
+func NewTableAffinityInfoWithLevel(level string) (*TableAffinityInfo, error) {
+	normalized, ok := ast.NormalizeTableAffinityLevel(level)
+	if !ok {
+		return nil, errors.Errorf("invalid table affinity level: '%s'", level)
+	}
+
+	if normalized == ast.TableAffinityLevelNone {
+		return nil, nil
+	}
+
+	return &TableAffinityInfo{
+		Level: normalized,
+	}, nil
+}
+
+// Clone clones TableAffinityInfo
+func (t *TableAffinityInfo) Clone() *TableAffinityInfo {
+	cloned := *t
+	return &cloned
+}
+
+// SoftdeleteInfo records the Softdelete config.
+type SoftdeleteInfo struct {
+	Retention string `json:"retention,omitempty"`
+	// JobEnable is used to control the cleanup JobEnable
+	JobEnable   bool   `json:"job_enable,omitempty"`
+	JobInterval string `json:"job_interval,omitempty"`
+}
+
+// Clone clones TTLInfo
+func (t *SoftdeleteInfo) Clone() *SoftdeleteInfo {
+	cloned := *t
+	return &cloned
 }

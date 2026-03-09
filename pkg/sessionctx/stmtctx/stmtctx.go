@@ -274,7 +274,6 @@ type StatementContext struct {
 	// in stmtCtx
 	IsStaleness     bool
 	InRestrictedSQL bool
-	ViewDepth       int32
 	// mu struct holds variables that change during execution.
 	mu *stmtCtxMu
 
@@ -325,6 +324,15 @@ type StatementContext struct {
 	// BindSQL used to construct the key for plan cache. It records the binding used by the stmt.
 	// If the binding is not used by the stmt, the value is empty
 	BindSQL string
+
+	// ExecRetryCount records the number of retries for executing the statement.
+	// It is set after ExecStmt execution and currently only used in the Slow Log phase
+	// after LogSlowQuery is called.
+	ExecRetryCount uint64
+	// ExecSuccess indicates whether the statement execution succeeded.
+	// It is set after ExecStmt execution and currently only used in the Slow Log phase
+	// after LogSlowQuery is called.
+	ExecSuccess bool
 
 	// The several fields below are mainly for some diagnostic features, like stmt summary and slow query.
 	// We cache the values here to avoid calculating them multiple times.
@@ -1190,10 +1198,13 @@ func (sc *StatementContext) DetachMemDiskTracker() {
 	}
 }
 
-// SetStaleTSOProvider sets the stale TSO provider.
-func (sc *StatementContext) SetStaleTSOProvider(eval func() (uint64, error)) {
+// SetStaleTSOProviderIfNotExist sets the stale TSO provider.
+func (sc *StatementContext) SetStaleTSOProviderIfNotExist(eval func() (uint64, error)) {
 	sc.StaleTSOProvider.Lock()
 	defer sc.StaleTSOProvider.Unlock()
+	if sc.StaleTSOProvider.eval != nil {
+		return
+	}
 	sc.StaleTSOProvider.value = nil
 	sc.StaleTSOProvider.eval = eval
 }

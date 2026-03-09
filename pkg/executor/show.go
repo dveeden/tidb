@@ -292,6 +292,8 @@ func (e *ShowExec) fetchAll(ctx context.Context) error {
 		return e.fetchShowImportJobs(ctx)
 	case ast.ShowDistributionJobs:
 		return e.fetchShowDistributionJobs(ctx)
+	case ast.ShowAffinity:
+		return e.fetchShowAffinity(ctx)
 	}
 	return nil
 }
@@ -705,10 +707,21 @@ func (e *ShowExec) fetchShowColumns(ctx context.Context) error {
 		fieldPatternsLike = e.Extractor.FieldPatternLike()
 	}
 
+	// SHOW COLUMNS displays information only for those columns for which you have some privilege.
+	// https://dev.mysql.com/doc/refman/8.4/en/show-columns.html
+	// 1. If you have table privilege, all columns can be shown
+	// 2. If you have only some columns privielge, these columns can be shown
+	// 3. If you have neither table or column privilege, an error is returned
+	passTblPrivCheck, passColPrivCheck := false, false
 	checker := privilege.GetPrivilegeManager(e.Ctx())
 	activeRoles := e.Ctx().GetSessionVars().ActiveRoles
-	if checker != nil && e.Ctx().GetSessionVars().User != nil && !checker.RequestVerification(activeRoles, e.DBName.O, tb.Meta().Name.O, "", mysql.InsertPriv|mysql.SelectPriv|mysql.UpdatePriv|mysql.ReferencesPriv) {
-		return e.tableAccessDenied("SELECT", tb.Meta().Name.O)
+	priv := mysql.InsertPriv | mysql.SelectPriv | mysql.UpdatePriv | mysql.ReferencesPriv
+	if checker != nil && e.Ctx().GetSessionVars().User != nil {
+		if checker.RequestVerification(activeRoles, e.DBName.O, tb.Meta().Name.O, "", priv) {
+			passTblPrivCheck = true
+		}
+	} else {
+		passTblPrivCheck = true
 	}
 
 	var cols []*table.Column
@@ -727,6 +740,13 @@ func (e *ShowExec) fetchShowColumns(ctx context.Context) error {
 			continue
 		} else if fieldPatternsLike != nil && !fieldPatternsLike.DoMatch(col.Name.L) {
 			continue
+		}
+		if !passTblPrivCheck {
+			if !checker.RequestVerification(activeRoles, e.DBName.O, tb.Meta().Name.O, col.Name.O, priv) {
+				// check privileges in column level
+				continue
+			}
+			passColPrivCheck = true
 		}
 		desc := table.NewColDesc(col)
 		var columnDefault any
@@ -774,6 +794,9 @@ func (e *ShowExec) fetchShowColumns(ctx context.Context) error {
 			})
 		}
 	}
+	if !passTblPrivCheck && !passColPrivCheck {
+		return e.tableAccessDenied("SELECT", tb.Meta().Name.O)
+	}
 	return nil
 }
 
@@ -788,10 +811,21 @@ func (e *ShowExec) fetchShowIndex() error {
 
 	statsTbl := h.GetPhysicalTableStats(tb.Meta().ID, tb.Meta())
 
+	// SHOW INDEX requires some privilege for any column in the table.
+	// https://dev.mysql.com/doc/refman/8.4/en/show-index.html
 	checker := privilege.GetPrivilegeManager(e.Ctx())
 	activeRoles := e.Ctx().GetSessionVars().ActiveRoles
-	if checker != nil && e.Ctx().GetSessionVars().User != nil && !checker.RequestVerification(activeRoles, e.DBName.O, tb.Meta().Name.O, "", mysql.AllPrivMask) {
-		return e.tableAccessDenied("SELECT", tb.Meta().Name.O)
+	if checker != nil && e.Ctx().GetSessionVars().User != nil {
+		passCheck := false
+		for _, col := range tb.VisibleCols() {
+			if checker.RequestVerification(activeRoles, e.DBName.O, tb.Meta().Name.O, col.Name.O, mysql.AllPrivMask) {
+				passCheck = true
+				break
+			}
+		}
+		if !passCheck {
+			return e.tableAccessDenied("SELECT", tb.Meta().Name.O)
+		}
 	}
 
 	if tb.Meta().PKIsHandle {
@@ -1447,6 +1481,10 @@ func constructResultOfShowCreateTable(ctx sessionctx.Context, dbName *pmodel.CIS
 		if err != nil {
 			return err
 		}
+	}
+
+	if tableInfo.Affinity != nil {
+		fmt.Fprintf(buf, " /*T![%s] AFFINITY='%s' */", tidb.FeatureIDAffinity, tableInfo.Affinity.Level)
 	}
 
 	// add partition info here.
