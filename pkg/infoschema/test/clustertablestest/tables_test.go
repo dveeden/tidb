@@ -211,8 +211,7 @@ func TestSomeTables(t *testing.T) {
 		defer memory.CleanupGlobalMemArbitratorForTest()
 		require.True(t, memory.SetGlobalMemArbitratorWorkMode(memory.ArbitratorModeStandardName))
 		memTracker := se2.GetSessionVars().StmtCtx.MemTracker
-		require.True(t,
-			memTracker.InitMemArbitrator(memory.GlobalMemArbitrator(), 0, nil, "", memory.ArbitrationPriorityMedium, false, 0))
+		require.True(t, memTracker.InitMemArbitratorForTest())
 		memTracker.MemArbitrator.AwaitAlloc.TotalDur.Add(2e9 + 1e8)
 		memTracker.MemArbitrator.AwaitAlloc.Size = 123456789123
 		memTracker.MemArbitrator.AwaitAlloc.StartUtime = 123456789123456
@@ -492,6 +491,7 @@ func TestSlowQuery(t *testing.T) {
 			"0",
 			"0",
 			"0",
+			"",
 			"abcd",
 			"60e9378c746d9a2be1c791047e008967cf252eb6de9167ad3aa6098fa2d523f4",
 			"",
@@ -585,6 +585,7 @@ func TestSlowQuery(t *testing.T) {
 			"0.021",
 			"1",
 			"1",
+			"",
 			"",
 			"",
 			"",

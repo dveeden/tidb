@@ -31,11 +31,11 @@ import (
 	"github.com/pingcap/tidb/br/pkg/utils"
 	"github.com/pingcap/tidb/pkg/bindinfo"
 	"github.com/pingcap/tidb/pkg/ddl"
-	"github.com/pingcap/tidb/pkg/disttask/framework/proto"
-	fstorage "github.com/pingcap/tidb/pkg/disttask/framework/storage"
-	"github.com/pingcap/tidb/pkg/disttask/importinto"
 	"github.com/pingcap/tidb/pkg/domain"
 	"github.com/pingcap/tidb/pkg/domain/infosync"
+	"github.com/pingcap/tidb/pkg/dxf/framework/proto"
+	fstorage "github.com/pingcap/tidb/pkg/dxf/framework/storage"
+	"github.com/pingcap/tidb/pkg/dxf/importinto"
 	"github.com/pingcap/tidb/pkg/executor/importer"
 	"github.com/pingcap/tidb/pkg/executor/internal/exec"
 	"github.com/pingcap/tidb/pkg/expression"
@@ -232,7 +232,7 @@ func (e *ShowExec) fetchAll(ctx context.Context) error {
 	case ast.ShowEvents:
 		// empty result
 	case ast.ShowStatsExtended:
-		return e.fetchShowStatsExtended(ctx)
+		return errors.New("Extended statistics feature has been removed")
 	case ast.ShowStatsMeta:
 		return e.fetchShowStatsMeta(ctx)
 	case ast.ShowStatsHistograms:
@@ -350,6 +350,9 @@ func (e *ShowExec) fetchShowBind() error {
 		return cmpResult > 0
 	})
 	for _, hint := range bindings {
+		if hint == nil { // if the binding cache doesn't have enough memory, it might return nil
+			continue
+		}
 		stmt, err := parser.ParseOneStmt(hint.BindSQL, hint.Charset, hint.Collation)
 		if err != nil {
 			return err
@@ -1414,6 +1417,81 @@ func constructResultOfShowCreateTable(ctx sessionctx.Context, dbName *ast.CIStr,
 		// This is not meant to be understand by other components, so it's not written as /*T![cached] */
 		// For all external components, cached table is just a normal table.
 		fmt.Fprintf(buf, " /* CACHED ON */")
+	}
+
+	var parse *parser.Parser
+	// Show table region split policy
+	if tableInfo.TableSplitPolicy != nil {
+		parse = parser.New()
+		buf.WriteString("\n/*T![region_split] ")
+		buf.WriteString("SPLIT BETWEEN (")
+
+		policy := tableInfo.TableSplitPolicy
+
+		for i, val := range policy.Lower {
+			if i > 0 {
+				buf.WriteString(", ")
+			}
+			if err := formatSplitValue(parse, buf, val); err != nil {
+				return errors.Trace(err)
+			}
+		}
+		buf.WriteString(") AND (")
+
+		for i, val := range policy.Upper {
+			if i > 0 {
+				buf.WriteString(", ")
+			}
+			if err := formatSplitValue(parse, buf, val); err != nil {
+				return errors.Trace(err)
+			}
+		}
+
+		fmt.Fprintf(buf, ") REGIONS %d", policy.Regions)
+		buf.WriteString(" */")
+	}
+
+	// Show index region split policies
+	for _, indexInfo := range tableInfo.Indices {
+		if indexInfo.RegionSplitPolicy == nil {
+			continue
+		}
+		if parse == nil {
+			parse = parser.New()
+		}
+
+		policy := indexInfo.RegionSplitPolicy
+		buf.WriteString("\n/*T![region_split] ")
+
+		fmt.Fprintf(buf, "SPLIT ")
+		if indexInfo.Name.O == mysql.PrimaryKeyName {
+			fmt.Fprintf(buf, "PRIMARY KEY ")
+		} else {
+			fmt.Fprintf(buf, "INDEX ")
+		}
+		fmt.Fprintf(buf, "%s BETWEEN (", stringutil.Escape(indexInfo.Name.O, sqlMode))
+
+		for i, val := range policy.Lower {
+			if i > 0 {
+				buf.WriteString(", ")
+			}
+			if err := formatSplitValue(parse, buf, val); err != nil {
+				return errors.Trace(err)
+			}
+		}
+		buf.WriteString(") AND (")
+
+		for i, val := range policy.Upper {
+			if i > 0 {
+				buf.WriteString(", ")
+			}
+			if err := formatSplitValue(parse, buf, val); err != nil {
+				return errors.Trace(err)
+			}
+		}
+
+		fmt.Fprintf(buf, ") REGIONS %d", policy.Regions)
+		buf.WriteString(" */")
 	}
 
 	if tableInfo.TTLInfo != nil {
@@ -2819,4 +2897,13 @@ func runWithSystemSession(ctx context.Context, sctx sessionctx.Context, fn func(
 		return err
 	}
 	return fn(sysCtx)
+}
+
+func formatSplitValue(parser *parser.Parser, buf *bytes.Buffer, val string) error {
+	stmts, _, err := parser.ParseSQL("select " + val)
+	if err == nil {
+		expr := stmts[0].(*ast.SelectStmt).Fields.Fields[0].Expr
+		expr.Format(buf)
+	}
+	return err
 }

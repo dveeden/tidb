@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc64"
+	"math"
 	"regexp"
 	"slices"
 	"strconv"
@@ -143,6 +144,8 @@ const (
 	SlowLogStorageFromKV = "Storage_from_kv"
 	// SlowLogStorageFromMPP is used to indicate whether the statement read data from TiFlash.
 	SlowLogStorageFromMPP = "Storage_from_mpp"
+	// SlowLogRUV2Metrics is the RU v2 metrics for the statement.
+	SlowLogRUV2Metrics = "RUv2_metrics"
 
 	// The following constants define the set of fields for SlowQueryLogItems
 	// that are relevant to evaluating and triggering SlowLogRules.
@@ -161,6 +164,17 @@ const (
 	SlowLogRewriteTimeStr = "Rewrite_time"
 	// SlowLogOptimizeTimeStr is the optimization time.
 	SlowLogOptimizeTimeStr = "Optimize_time"
+	// SlowLogOptimizeLogicalOpt is the logical optimization time.
+	SlowLogOptimizeLogicalOpt = "Opt_logical"
+	// SlowLogOptimizePhysicalOpt is the physical optimization time.
+	SlowLogOptimizePhysicalOpt = "Opt_physical"
+	// SlowLogOptimizeBindingMatch is the binding match time.
+	SlowLogOptimizeBindingMatch = "Opt_binding_match"
+	// SlowLogOptimizeStatsSyncWait is the stats sync wait time.
+	SlowLogOptimizeStatsSyncWait = "Opt_stats_sync_wait"
+	// SlowLogOptimizeStatsDerive is the stats derive time.
+	SlowLogOptimizeStatsDerive = "Opt_stats_derive"
+
 	// SlowLogWaitTSTimeStr is the time of waiting TS.
 	SlowLogWaitTSTimeStr = "Wait_TS"
 	// SlowLogDBStr is slow log field name.
@@ -207,6 +221,8 @@ const (
 	SlowLogExecRetryCount = "Exec_retry_count"
 	// SlowLogResourceGroup is the resource group name that the current session bind.
 	SlowLogResourceGroup = "Resource_group"
+	// SlowLogCopMVCCReadAmplification is total_keys / processed_keys in coprocessor scan detail.
+	SlowLogCopMVCCReadAmplification = "cop_mvcc_read_amplification"
 )
 
 // JSONSQLWarnForSlowLog helps to print the SQLWarn through the slow log in JSON format.
@@ -283,6 +299,7 @@ type SlowQueryLogItems struct {
 	// resource information
 	ResourceGroupName string
 	RUDetails         *util.RUDetails
+	RUV2Metrics       *execdetails.RUV2Metrics
 	MemMax            int64
 	DiskMax           int64
 	CPUUsages         ppcpuusage.CPUUsages
@@ -389,7 +406,16 @@ func (s *SessionVars) SlowLogFormat(logItems *SlowQueryLogItems) string {
 	}
 	buf.WriteString("\n")
 
-	writeSlowLogItem(&buf, SlowLogOptimizeTimeStr, strconv.FormatFloat(s.DurationOptimization.Seconds(), 'f', -1, 64))
+	// optimizer time
+	buf.WriteString(SlowLogRowPrefixStr)
+	buf.WriteString(SlowLogOptimizeTimeStr + SlowLogSpaceMarkStr + strconv.FormatFloat(s.DurationOptimizer.Total.Seconds(), 'f', -1, 64) + " ")
+	buf.WriteString(SlowLogOptimizeLogicalOpt + SlowLogSpaceMarkStr + strconv.FormatFloat(s.DurationOptimizer.LogicalOpt.Seconds(), 'f', -1, 64) + " ")
+	buf.WriteString(SlowLogOptimizePhysicalOpt + SlowLogSpaceMarkStr + strconv.FormatFloat(s.DurationOptimizer.PhysicalOpt.Seconds(), 'f', -1, 64) + " ")
+	buf.WriteString(SlowLogOptimizeBindingMatch + SlowLogSpaceMarkStr + strconv.FormatFloat(s.DurationOptimizer.BindingMatch.Seconds(), 'f', -1, 64) + " ")
+	buf.WriteString(SlowLogOptimizeStatsSyncWait + SlowLogSpaceMarkStr + strconv.FormatFloat(s.DurationOptimizer.StatsSyncWait.Seconds(), 'f', -1, 64) + " ")
+	buf.WriteString(SlowLogOptimizeStatsDerive + SlowLogSpaceMarkStr + strconv.FormatFloat(s.DurationOptimizer.StatsDerive.Seconds(), 'f', -1, 64))
+	buf.WriteString("\n")
+
 	writeSlowLogItem(&buf, SlowLogWaitTSTimeStr, strconv.FormatFloat(s.DurationWaitTS.Seconds(), 'f', -1, 64))
 
 	if execDetailStr := logItems.ExecDetail.String(); len(execDetailStr) > 0 {
@@ -529,6 +555,14 @@ func (s *SessionVars) SlowLogFormat(logItems *SlowQueryLogItems) string {
 	}
 	writeSlowLogItem(&buf, SlowLogStorageFromKV, strconv.FormatBool(logItems.StorageKV))
 	writeSlowLogItem(&buf, SlowLogStorageFromMPP, strconv.FormatBool(logItems.StorageMPP))
+	var tiKVRU, tiFlashRU int64
+	if logItems.RUDetails != nil {
+		tiKVRU = int64(logItems.RUDetails.TiKVRUV2())
+		tiFlashRU = int64(logItems.RUDetails.TiflashRU())
+	}
+	if formatted := execdetails.FormatRUV2Metrics(logItems.RUV2Metrics, s.RUV2Weights(), tiKVRU, tiFlashRU); len(formatted) > 0 {
+		writeSlowLogItem(&buf, SlowLogRUV2Metrics, formatted)
+	}
 	if logItems.PrevStmt != "" {
 		writeSlowLogItem(&buf, SlowLogPrevStmt, logItems.PrevStmt)
 	}
@@ -618,6 +652,14 @@ func matchGE[T numericComparable](threshold any, v T) bool {
 	return ok && v >= tv
 }
 
+// uint64FromNonNegative converts a signed value to uint64 if it is non-negative.
+func uint64FromNonNegative(v int64) (uint64, bool) {
+	if v < 0 {
+		return 0, false
+	}
+	return uint64(v), true
+}
+
 func matchZero(threshold any) bool {
 	switch v := threshold.(type) {
 	case int:
@@ -633,12 +675,33 @@ func matchZero(threshold any) bool {
 	}
 }
 
-// ParseString converts the input string to lowercase and returns it.
-func ParseString(v string) (any, error)  { return v, nil }
-func parseInt64(v string) (any, error)   { return strconv.ParseInt(v, 10, 64) }
-func parseUint64(v string) (any, error)  { return strconv.ParseUint(v, 10, 64) }
-func parseFloat64(v string) (any, error) { return strconv.ParseFloat(v, 64) }
-func parseBool(v string) (any, error)    { return strconv.ParseBool(v) }
+// ParseString returns the input string as-is.
+func ParseString(v string) (any, error) { return v, nil }
+func parseInt64(v string) (any, error) {
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	if n < 0 {
+		return nil, fmt.Errorf("threshold value must be non-negative, got %d", n)
+	}
+	return n, nil
+}
+func parseUint64(v string) (any, error) { return strconv.ParseUint(v, 10, 64) }
+func parseFloat64(v string) (any, error) {
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return nil, err
+	}
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return nil, fmt.Errorf("threshold value must be finite, got %v", f)
+	}
+	if f < 0 {
+		return nil, fmt.Errorf("threshold value must be non-negative, got %v", f)
+	}
+	return f, nil
+}
+func parseBool(v string) (any, error) { return strconv.ParseBool(v) }
 
 // SlowLogRuleFieldAccessors defines the set of field accessors for SlowQueryLogItems
 // that are relevant to evaluating and triggering SlowLogRules.
@@ -704,7 +767,7 @@ var SlowLogRuleFieldAccessors = map[string]SlowLogFieldAccessor{
 	strings.ToLower(SlowLogOptimizeTimeStr): {
 		Parse: parseFloat64,
 		Match: func(seVars *SessionVars, _ *SlowQueryLogItems, threshold any) bool {
-			return matchGE(threshold, seVars.DurationOptimization.Seconds())
+			return matchGE(threshold, seVars.DurationOptimizer.Total.Seconds())
 		},
 	},
 	strings.ToLower(SlowLogWaitTSTimeStr): {
@@ -869,7 +932,8 @@ var SlowLogRuleFieldAccessors = map[string]SlowLogFieldAccessor{
 			if d.ScanDetail == nil {
 				return matchZero(threshold)
 			}
-			return matchGE(threshold, d.ScanDetail.TotalKeys)
+			totalKeys, ok := uint64FromNonNegative(d.ScanDetail.TotalKeys)
+			return ok && matchGE(threshold, totalKeys)
 		}),
 	strings.ToLower(execdetails.ProcessKeysStr): makeExecDetailAccessor(
 		parseUint64,
@@ -877,7 +941,16 @@ var SlowLogRuleFieldAccessors = map[string]SlowLogFieldAccessor{
 			if d.ScanDetail == nil {
 				return matchZero(threshold)
 			}
-			return matchGE(threshold, d.ScanDetail.ProcessedKeys)
+			processedKeys, ok := uint64FromNonNegative(d.ScanDetail.ProcessedKeys)
+			return ok && matchGE(threshold, processedKeys)
+		}),
+	strings.ToLower(SlowLogCopMVCCReadAmplification): makeExecDetailAccessor(
+		parseFloat64,
+		func(d *execdetails.ExecDetails, threshold any) bool {
+			if d.ScanDetail == nil || d.ScanDetail.ProcessedKeys <= 0 {
+				return matchZero(threshold)
+			}
+			return matchGE(threshold, float64(d.ScanDetail.TotalKeys)/float64(d.ScanDetail.ProcessedKeys))
 		}),
 	strings.ToLower(execdetails.PreWriteTimeStr): makeExecDetailAccessor(
 		parseFloat64,
@@ -901,7 +974,8 @@ var SlowLogRuleFieldAccessors = map[string]SlowLogFieldAccessor{
 			if d.CommitDetail == nil {
 				return matchZero(threshold)
 			}
-			return matchGE(threshold, int64(d.CommitDetail.WriteKeys))
+			writeKeys, ok := uint64FromNonNegative(int64(d.CommitDetail.WriteKeys))
+			return ok && matchGE(threshold, writeKeys)
 		}),
 	strings.ToLower(execdetails.WriteSizeStr): makeExecDetailAccessor(
 		parseUint64,
@@ -909,7 +983,8 @@ var SlowLogRuleFieldAccessors = map[string]SlowLogFieldAccessor{
 			if d.CommitDetail == nil {
 				return matchZero(threshold)
 			}
-			return matchGE(threshold, int64(d.CommitDetail.WriteSize))
+			writeSize, ok := uint64FromNonNegative(int64(d.CommitDetail.WriteSize))
+			return ok && matchGE(threshold, writeSize)
 		}),
 	strings.ToLower(execdetails.PrewriteRegionStr): makeExecDetailAccessor(
 		parseUint64,
@@ -917,7 +992,9 @@ var SlowLogRuleFieldAccessors = map[string]SlowLogFieldAccessor{
 			if d.CommitDetail == nil {
 				return matchZero(threshold)
 			}
-			return matchGE(threshold, int64(atomic.LoadInt32(&d.CommitDetail.PrewriteRegionNum)))
+			prewriteRegionNum := atomic.LoadInt32(&d.CommitDetail.PrewriteRegionNum)
+			prewriteRegion, ok := uint64FromNonNegative(int64(prewriteRegionNum))
+			return ok && matchGE(threshold, prewriteRegion)
 		}),
 }
 
