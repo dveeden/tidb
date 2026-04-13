@@ -344,6 +344,10 @@ func TestValidator(t *testing.T) {
 		// LATERAL derived tables pass preprocessing; validation happens in the planner.
 		{"SELECT * FROM t, LATERAL (SELECT t.a) AS dt", false, nil},
 		{"SELECT * FROM t LEFT JOIN LATERAL (SELECT t.a) AS dt ON true", false, nil},
+
+		{"CREATE TABLE t(g GEOMETRY)", false, errors.New("spatial data types are not supported")},
+		{"CREATE TABLE t(g GEOMETRY SRID 0)", false, errors.New("spatial data types are not supported")},
+		{"CREATE TABLE t(g VARBINARY(16) SRID 0)", false, plannererrors.ErrWrongUsage.GenWithStackByArgs("SRID", "non-geometry column")},
 	}
 
 	store := testkit.CreateMockStore(t)
