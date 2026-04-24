@@ -912,8 +912,6 @@ func TestBatchInsertDelete(t *testing.T) {
 	defer func() {
 		kv.TxnTotalSizeLimit.Store(originLimit)
 	}()
-	// Set the limitation to a small value, make it easier to reach the limitation.
-	kv.TxnTotalSizeLimit.Store(8050)
 
 	tk := testkit.NewTestKit(t, store)
 	tk.MustExec("use test")
@@ -921,6 +919,9 @@ func TestBatchInsertDelete(t *testing.T) {
 	tk.MustExec("create table batch_insert (c int)")
 	tk.MustExec("drop table if exists batch_insert_on_duplicate")
 	tk.MustExec("create table batch_insert_on_duplicate (id int primary key, c int)")
+	// Set the limitation to a small value after table creation, make it easier to reach the
+	// limitation for DML without risking DDL retries due to schema metadata size.
+	kv.TxnTotalSizeLimit.Store(8050)
 	// Insert 10 rows.
 	tk.MustExec("insert into batch_insert values (1),(1),(1),(1),(1),(1),(1),(1),(1),(1)")
 	r := tk.MustQuery("select count(*) from batch_insert;")
